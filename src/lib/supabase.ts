@@ -11,7 +11,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Get the current site URL based on environment
 const siteUrl = import.meta.env.DEV 
   ? 'http://localhost:5173'  // Development URL
-  : 'https://mailandshiponline.com'; // Production URL
+  : import.meta.env.VITE_SITE_URL || 'https://mailandshiponline.com'; // Production URL
 
 export const supabase = createClient<Database>(
   supabaseUrl, 
@@ -24,12 +24,16 @@ export const supabase = createClient<Database>(
       flowType: 'pkce',
       redirectTo: `${siteUrl}/auth/callback`,
       storageKey: 'mailbox-auth',
-      storage: window.localStorage
+      storage: typeof window !== 'undefined' ? window.localStorage : undefined,
+      emailRedirectTo: `${siteUrl}/auth/callback`
     },
     global: {
       headers: {
         'apikey': supabaseAnonKey
       }
+    },
+    db: {
+      schema: 'public'
     }
   }
 );

@@ -23,7 +23,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface CustomerDashboardProps {
-  onNavigate?: (page: string) => void;
+  onNavigate: (page: string) => void;
 }
 
 const mailData = [
@@ -60,12 +60,14 @@ const recentActivity = [
 ];
 
 export function CustomerDashboard({ onNavigate }: CustomerDashboardProps) {
-  const { user, logout } = useAuth();
+  const { user, signOut } = useAuth();
 
-  const handleLogout = () => {
-    logout();
-    if (onNavigate) {
+  const handleLogout = async () => {
+    try {
+      await signOut();
       onNavigate('home');
+    } catch (error) {
+      console.error('Logout error:', error);
     }
   };
 

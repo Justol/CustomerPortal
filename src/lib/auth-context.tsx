@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
+  userDetails: { role: string } | null;
   loading: boolean;
   signUp: (email: string, password: string, metadata?: { [key: string]: any }) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [userDetails, setUserDetails] = useState<{ role: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -23,17 +25,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Check active sessions and sets the user
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (session?.user) {
+        fetchUserDetails(session.user.id);
+      }
     });
 
     // Listen for changes on auth state (signed in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setUser(session?.user ?? null);
+      if (session?.user) {
+        fetchUserDetails(session.user.id);
+      } else {
+        setUserDetails(null);
+      }
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
+
+  const fetchUserDetails = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      setUserDetails(data);
+    } catch (error) {
+      console.error('Error fetching user details:', error);
+      setUserDetails(null);
+    }
+  };
 
   const signUp = async (email: string, password: string, metadata?: { [key: string]: any }) => {
     try {
@@ -45,8 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           data: {
             ...metadata,
             role: 'customer'
-          },
-          emailRedirectTo: `${window.location.origin}/auth/callback`
+          }
         }
       });
 
@@ -118,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider 
       value={{ 
         user, 
+        userDetails,
         loading,
         signUp,
         signIn,
