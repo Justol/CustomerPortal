@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
+import { FreeTrialDialog } from '@/components/auth/FreeTrialDialog';
 
 export function CTA() {
   return (
@@ -14,9 +15,13 @@ export function CTA() {
             Start your 30-day free trial today.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button size="lg" className="gap-2">
-              Start Free Trial <ArrowRight className="h-4 w-4" />
-            </Button>
+            <FreeTrialDialog 
+              trigger={
+                <Button size="lg" className="gap-2">
+                  Start Free Trial <ArrowRight className="h-4 w-4" />
+                </Button>
+              }
+            />
             <Button size="lg" variant="outline">
               Contact Sales
             </Button>
