@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
+import type { User } from '@supabase/supabase-js';
 import { useToast } from './use-toast';
-import { AuthError, User } from '@supabase/supabase-js';
 
 export function useSupabaseAuth() {
   const [user, setUser] = useState<User | null>(null);
@@ -9,14 +9,14 @@ export function useSupabaseAuth() {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -24,16 +24,21 @@ export function useSupabaseAuth() {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = useCallback(async (email: string, password: string, metadata: { firstName: string; lastName: string }) => {
+  const signUp = async (
+    email: string,
+    password: string,
+    metadata?: { firstName?: string; lastName?: string }
+  ) => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
-            firstName: metadata.firstName,
-            lastName: metadata.lastName,
-            role: 'customer', // Default role
+            firstName: metadata?.firstName || '',
+            lastName: metadata?.lastName || '',
+            role: 'customer'
           },
         },
       });
@@ -41,22 +46,25 @@ export function useSupabaseAuth() {
       if (error) throw error;
 
       toast({
-        title: "Check your email",
-        description: "We've sent you a verification link to complete your registration.",
+        title: "Success!",
+        description: "Please check your email to confirm your account.",
       });
-    } catch (error) {
-      const e = error as AuthError;
+    } catch (error: any) {
+      console.error("Sign up error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: e.message,
+        description: error.message || "Failed to sign up. Please try again.",
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
-  }, [toast]);
+  };
 
-  const signIn = useCallback(async (email: string, password: string) => {
+  const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -66,82 +74,38 @@ export function useSupabaseAuth() {
 
       toast({
         title: "Welcome back!",
-        description: "You've successfully signed in.",
+        description: "You have successfully signed in.",
       });
-    } catch (error) {
-      const e = error as AuthError;
+    } catch (error: any) {
+      console.error("Sign in error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: e.message,
+        description: error.message || "Failed to sign in. Please try again.",
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
-  }, [toast]);
+  };
 
-  const signOut = useCallback(async () => {
+  const signOut = async () => {
     try {
+      setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-    } catch (error) {
-      const e = error as AuthError;
+    } catch (error: any) {
+      console.error("Sign out error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: e.message,
+        description: error.message || "Failed to sign out. Please try again.",
       });
       throw error;
+    } finally {
+      setLoading(false);
     }
-  }, [toast]);
-
-  const resetPassword = useCallback(async (email: string) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Check your email",
-        description: "We've sent you a password reset link.",
-      });
-    } catch (error) {
-      const e = error as AuthError;
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: e.message,
-      });
-      throw error;
-    }
-  }, [toast]);
-
-  const updateProfile = useCallback(async (data: { firstName?: string; lastName?: string }) => {
-    try {
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          firstName: data.firstName,
-          lastName: data.lastName,
-        },
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been successfully updated.",
-      });
-    } catch (error) {
-      const e = error as AuthError;
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: e.message,
-      });
-      throw error;
-    }
-  }, [toast]);
+  };
 
   return {
     user,
@@ -149,7 +113,5 @@ export function useSupabaseAuth() {
     signUp,
     signIn,
     signOut,
-    resetPassword,
-    updateProfile,
   };
 }

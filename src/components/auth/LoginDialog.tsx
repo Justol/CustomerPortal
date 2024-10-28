@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth-context';
 
 const loginSchema = z.object({
@@ -22,8 +21,7 @@ interface LoginDialogProps {
 
 export function LoginDialog({ onNavigate }: LoginDialogProps) {
   const [open, setOpen] = useState(false);
-  const { toast } = useToast();
-  const { signIn, user } = useAuth();
+  const { signIn, user, loading } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -36,21 +34,12 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
   const onSubmit = async (data: LoginForm) => {
     try {
       await signIn(data.email, data.password);
-      
-      toast({
-        title: "Logged in successfully!",
-        description: "Welcome back to MailBox & Ship.",
-      });
-      
       setOpen(false);
       form.reset();
       onNavigate('dashboard');
     } catch (error) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error instanceof Error ? error.message : "Invalid email or password.",
-      });
+      // Error is handled by the auth context
+      console.error('Sign in error:', error);
     }
   };
 
@@ -65,7 +54,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
           <Button variant="ghost">Login</Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Welcome back</DialogTitle>
           <DialogDescription>
@@ -81,7 +70,12 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input placeholder="you@example.com" {...field} />
+                    <Input 
+                      placeholder="you@example.com" 
+                      type="email"
+                      disabled={loading}
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -94,13 +88,19 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <Input type="password" {...field} />
+                    <Input 
+                      type="password"
+                      disabled={loading}
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full">Login</Button>
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Signing in..." : "Sign In"}
+            </Button>
           </form>
         </Form>
       </DialogContent>

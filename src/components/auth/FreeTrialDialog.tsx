@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,7 +11,6 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { X } from 'lucide-react';
 import { useAuth } from '@/lib/auth-context';
-import { useMailbox } from '@/hooks/use-mailbox';
 
 const states = [
   'AL', 'AK', 'AZ', 'AR', 'CA', 'CO', 'CT', 'DE', 'FL', 'GA',
@@ -28,14 +27,6 @@ const plans = [
   'Physical Mailbox - Business',
   'Physical Mailbox - Executive'
 ];
-
-const planToType = {
-  'Digital Mailbox - 30n': 'digital_30',
-  'Digital Mailbox - 60n': 'digital_60',
-  'Physical Mailbox - Standard': 'physical_standard',
-  'Physical Mailbox - Business': 'physical_business',
-  'Physical Mailbox - Executive': 'physical_executive',
-} as const;
 
 const freeTrialSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),
@@ -67,7 +58,6 @@ export function FreeTrialDialog({ trigger }: FreeTrialDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const { signUp } = useAuth();
-  const { createMailbox } = useMailbox(undefined); // We'll get the user ID after signup
 
   const form = useForm<FreeTrialForm>({
     resolver: zodResolver(freeTrialSchema),
@@ -91,34 +81,33 @@ export function FreeTrialDialog({ trigger }: FreeTrialDialogProps) {
 
   const onSubmit = async (data: FreeTrialForm) => {
     try {
-      // Sign up the user
       await signUp(data.email, data.password, {
         firstName: data.firstName,
         lastName: data.lastName,
+        companyName: data.companyName,
+        streetAddress: data.streetAddress,
+        apartment: data.apartment,
+        city: data.city,
+        state: data.state,
+        zipCode: data.zipCode,
+        phone: data.phone,
+        selectedPlan: data.selectedPlan,
+        chooseLocation: data.chooseLocation,
       });
-
-      // Create mailbox (this will be handled by the backend trigger)
-      const mailboxType = planToType[data.selectedPlan as keyof typeof planToType];
-      if (mailboxType) {
-        await createMailbox({
-          number: `MB-${Math.random().toString(36).substring(7)}`,
-          type: mailboxType
-        });
-      }
 
       toast({
         title: "Account created successfully!",
-        description: "Please check your email to verify your account.",
+        description: "Please check your email to confirm your account.",
       });
       
       setOpen(false);
       form.reset();
     } catch (error) {
-      console.error('Free trial signup error:', error);
+      console.error("Sign up error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        description: "There was a problem creating your account. Please try again.",
       });
     }
   };
@@ -132,9 +121,9 @@ export function FreeTrialDialog({ trigger }: FreeTrialDialogProps) {
         <DialogHeader className="flex flex-row items-center justify-between">
           <div className="flex-1">
             <DialogTitle>Start Your Free Trial</DialogTitle>
-            <p className="text-sm text-muted-foreground mt-1">
+            <DialogDescription>
               Enter your details to begin your 30-day free trial
-            </p>
+            </DialogDescription>
           </div>
           <Button
             variant="ghost"
@@ -148,8 +137,233 @@ export function FreeTrialDialog({ trigger }: FreeTrialDialogProps) {
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            {/* Form fields remain the same */}
-            {/* ... */}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="John" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="companyName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Your Company Name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="streetAddress"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Street Address *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Main St" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="apartment"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Apartment, Suite, etc. (Optional)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Apt 4B" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid sm:grid-cols-3 gap-4">
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Town / City *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="City" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="state"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>State *</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select state" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {states.map((state) => (
+                          <SelectItem key={state} value={state}>
+                            {state}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="zipCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>ZIP Code *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="12345" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email Address *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="you@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Phone *</FormLabel>
+                    <FormControl>
+                      <Input placeholder="(555) 123-4567" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Create Password *</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password *</FormLabel>
+                    <FormControl>
+                      <Input type="password" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="selectedPlan"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Selected Plan *</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a plan" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {plans.map((plan) => (
+                        <SelectItem key={plan} value={plan}>
+                          {plan}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="chooseLocation"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>
+                      Choose a Location
+                    </FormLabel>
+                  </div>
+                </FormItem>
+              )}
+            />
+
             <Button type="submit" className="w-full">Start Free Trial</Button>
           </form>
         </Form>

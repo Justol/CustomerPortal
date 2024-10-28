@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/lib/auth-context';
+import { useToast } from '@/hooks/use-toast';
 
 const signupSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -17,6 +17,8 @@ const signupSchema = z.object({
     .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
     .regex(/[0-9]/, 'Password must contain at least one number'),
   confirmPassword: z.string(),
+  firstName: z.string().min(2, 'First name must be at least 2 characters'),
+  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Passwords don't match",
   path: ["confirmPassword"],
@@ -26,9 +28,9 @@ type SignUpForm = z.infer<typeof signupSchema>;
 
 export function SignUpDialog() {
   const [open, setOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const { signUp } = useAuth();
   const { toast } = useToast();
-  const { signup } = useAuth();
+  const [loading, setLoading] = useState(false);
 
   const form = useForm<SignUpForm>({
     resolver: zodResolver(signupSchema),
@@ -36,30 +38,35 @@ export function SignUpDialog() {
       email: '',
       password: '',
       confirmPassword: '',
+      firstName: '',
+      lastName: '',
     },
   });
 
   const onSubmit = async (data: SignUpForm) => {
     try {
-      setIsLoading(true);
-      await signup(data.email, data.password);
+      setLoading(true);
+      await signUp(data.email, data.password, {
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
       
       toast({
-        title: "Sign up successful!",
-        description: "Please check your email to verify your account.",
+        title: "Account created!",
+        description: "Please check your email to confirm your account.",
       });
       
       setOpen(false);
       form.reset();
-    } catch (error) {
-      console.error('Sign up error:', error);
+    } catch (error: any) {
+      console.error("Sign up error:", error);
       toast({
         variant: "destructive",
-        title: "Sign up failed",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        title: "Error",
+        description: error.message || "Failed to sign up. Please try again.",
       });
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -68,7 +75,7 @@ export function SignUpDialog() {
       <DialogTrigger asChild>
         <Button>Sign Up</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>Create an account</DialogTitle>
           <DialogDescription>
@@ -77,6 +84,42 @@ export function SignUpDialog() {
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>First Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="John"
+                        disabled={loading}
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Name</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Doe"
+                        disabled={loading}
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
             <FormField
               control={form.control}
               name="email"
@@ -87,7 +130,7 @@ export function SignUpDialog() {
                     <Input 
                       placeholder="you@example.com" 
                       type="email"
-                      disabled={isLoading}
+                      disabled={loading}
                       {...field} 
                     />
                   </FormControl>
@@ -104,7 +147,7 @@ export function SignUpDialog() {
                   <FormControl>
                     <Input 
                       type="password"
-                      disabled={isLoading}
+                      disabled={loading}
                       {...field} 
                     />
                   </FormControl>
@@ -121,7 +164,7 @@ export function SignUpDialog() {
                   <FormControl>
                     <Input 
                       type="password"
-                      disabled={isLoading}
+                      disabled={loading}
                       {...field} 
                     />
                   </FormControl>
@@ -129,8 +172,8 @@ export function SignUpDialog() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing up..." : "Sign Up"}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? "Creating account..." : "Sign Up"}
             </Button>
           </form>
         </Form>
