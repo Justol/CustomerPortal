@@ -35,7 +35,9 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      await login(data.email);
+      // Simulate admin login for specific email
+      const role = data.email === 'admin@example.com' ? 'admin' : 'customer';
+      await login(data.email, role);
       
       toast({
         title: "Logged in successfully!",

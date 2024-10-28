@@ -4,11 +4,12 @@ interface User {
   email: string;
   firstName?: string;
   lastName?: string;
+  role: 'admin' | 'customer';
 }
 
 interface AuthContextType {
   user: User | null;
-  login: (email: string) => Promise<void>;
+  login: (email: string, role: 'admin' | 'customer') => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
@@ -18,10 +19,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = async (email: string) => {
+  const login = async (email: string, role: 'admin' | 'customer') => {
     // In a real app, you would validate credentials with your backend
-    // For demo purposes, we'll simulate a successful login
-    setUser({ email });
+    setUser({ email, role });
   };
 
   const logout = () => {
