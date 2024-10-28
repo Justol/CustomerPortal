@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Mail, 
   Package, 
@@ -9,58 +11,25 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   Truck,
-  AlertCircle
+  AlertCircle,
+  CreditCard,
+  User,
+  Bell
 } from 'lucide-react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from 'recharts';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CustomerOverview } from './customer/CustomerOverview';
+import { CustomerMailbox } from './customer/CustomerMailbox';
+import { CustomerPackages } from './customer/CustomerPackages';
+import { CustomerBilling } from './customer/CustomerBilling';
+import { CustomerProfile } from './customer/CustomerProfile';
+import { CustomerNotifications } from './customer/CustomerNotifications';
 
 interface CustomerDashboardProps {
   onNavigate: (page: string) => void;
 }
 
-const mailData = [
-  { month: 'Jan', received: 45, forwarded: 30 },
-  { month: 'Feb', received: 52, forwarded: 42 },
-  { month: 'Mar', received: 48, forwarded: 38 },
-  { month: 'Apr', received: 61, forwarded: 45 },
-  { month: 'May', received: 55, forwarded: 48 },
-  { month: 'Jun', received: 67, forwarded: 52 },
-];
-
-const recentActivity = [
-  {
-    id: 1,
-    type: 'mail',
-    description: 'New mail received from USPS',
-    time: '2 hours ago',
-    status: 'pending',
-  },
-  {
-    id: 2,
-    type: 'package',
-    description: 'Package forwarded to shipping address',
-    time: '5 hours ago',
-    status: 'completed',
-  },
-  {
-    id: 3,
-    type: 'scan',
-    description: 'Document scan requested',
-    time: '1 day ago',
-    status: 'processing',
-  },
-];
-
 export function CustomerDashboard({ onNavigate }: CustomerDashboardProps) {
   const { user, signOut } = useAuth();
+  const [activeTab, setActiveTab] = useState('overview');
 
   const handleLogout = async () => {
     try {
@@ -96,6 +65,14 @@ export function CustomerDashboard({ onNavigate }: CustomerDashboardProps) {
       trendValue: '+3.2%',
       color: 'text-green-500'
     },
+    { 
+      icon: CreditCard, 
+      label: 'Balance', 
+      value: '$45.20',
+      trend: 'up',
+      trendValue: '+8.7%',
+      color: 'text-green-500'
+    },
   ];
 
   return (
@@ -114,7 +91,7 @@ export function CustomerDashboard({ onNavigate }: CustomerDashboardProps) {
           </div>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 mb-8">
+        <div className="grid md:grid-cols-4 gap-6 mb-8">
           {stats.map((stat) => (
             <Card key={stat.label} className="p-6">
               <div className="flex items-center justify-between">
@@ -140,84 +117,56 @@ export function CustomerDashboard({ onNavigate }: CustomerDashboardProps) {
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-3 gap-8 mb-8">
-          <Card className="lg:col-span-2 p-6">
-            <h3 className="text-lg font-semibold mb-4">Mail Activity</h3>
-            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={mailData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line 
-                    type="monotone" 
-                    dataKey="received" 
-                    stroke="hsl(var(--primary))" 
-                    strokeWidth={2}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="forwarded" 
-                    stroke="hsl(var(--muted-foreground))" 
-                    strokeWidth={2}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card className="p-6">
-            <h3 className="text-lg font-semibold mb-4">Recent Activity</h3>
-            <div className="space-y-6">
-              {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start gap-4">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    {activity.type === 'mail' && <Mail className="h-4 w-4 text-primary" />}
-                    {activity.type === 'package' && <Package className="h-4 w-4 text-primary" />}
-                    {activity.type === 'scan' && <Clock className="h-4 w-4 text-primary" />}
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-medium">{activity.description}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
-                  </div>
-                  <div className={`text-xs font-medium ${
-                    activity.status === 'completed' ? 'text-green-500' :
-                    activity.status === 'pending' ? 'text-yellow-500' :
-                    'text-blue-500'
-                  }`}>
-                    {activity.status}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        <Tabs defaultValue="mail" className="w-full">
-          <TabsList>
-            <TabsTrigger value="mail">Mail</TabsTrigger>
-            <TabsTrigger value="packages">Packages</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+          <TabsList className="grid grid-cols-3 md:grid-cols-6 gap-4">
+            <TabsTrigger value="overview" className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Overview
+            </TabsTrigger>
+            <TabsTrigger value="mailbox" className="flex items-center gap-2">
+              <Mail className="h-4 w-4" />
+              Mailbox
+            </TabsTrigger>
+            <TabsTrigger value="packages" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Packages
+            </TabsTrigger>
+            <TabsTrigger value="billing" className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Billing
+            </TabsTrigger>
+            <TabsTrigger value="profile" className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Profile
+            </TabsTrigger>
+            <TabsTrigger value="notifications" className="flex items-center gap-2">
+              <Bell className="h-4 w-4" />
+              Notifications
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="mail">
-            <Card className="p-6">
-              <div className="flex items-center gap-2 text-yellow-500 bg-yellow-50 dark:bg-yellow-500/10 p-4 rounded-lg mb-6">
-                <AlertCircle className="h-5 w-5" />
-                <p className="text-sm">You have 3 pieces of mail waiting for action</p>
-              </div>
-              {/* Mail content would go here */}
-            </Card>
+
+          <TabsContent value="overview">
+            <CustomerOverview />
           </TabsContent>
+
+          <TabsContent value="mailbox">
+            <CustomerMailbox />
+          </TabsContent>
+
           <TabsContent value="packages">
-            <Card className="p-6">
-              {/* Package tracking content would go here */}
-            </Card>
+            <CustomerPackages />
           </TabsContent>
+
+          <TabsContent value="billing">
+            <CustomerBilling />
+          </TabsContent>
+
+          <TabsContent value="profile">
+            <CustomerProfile />
+          </TabsContent>
+
           <TabsContent value="notifications">
-            <Card className="p-6">
-              {/* Notifications content would go here */}
-            </Card>
+            <CustomerNotifications />
           </TabsContent>
         </Tabs>
       </div>
