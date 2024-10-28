@@ -1,4 +1,4 @@
-import { useAuth } from '@/lib/auth-context';
+import { useAuthGuard } from '@/hooks/use-auth-guard';
 import { CustomerDashboard } from '@/components/dashboard/CustomerDashboard';
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
 
@@ -7,9 +7,9 @@ interface DashboardProps {
 }
 
 export function Dashboard({ onNavigate }: DashboardProps) {
-  const { user } = useAuth();
+  const { user, loading } = useAuthGuard(onNavigate!);
 
-  if (!user) {
+  if (loading || !user) {
     return null;
   }
 

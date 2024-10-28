@@ -15,7 +15,7 @@ interface NavbarProps {
 
 export function Navbar({ onNavigate, currentPage }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const { isAuthenticated } = useAuth();
+  const { user } = useAuth();
   
   const navItems = [
     { name: 'Home', path: 'home' },
@@ -27,7 +27,7 @@ export function Navbar({ onNavigate, currentPage }: NavbarProps) {
     { name: 'Contact', path: 'contact' },
   ];
 
-  if (isAuthenticated) {
+  if (user) {
     navItems.push({ name: 'Dashboard', path: 'dashboard' });
   }
 

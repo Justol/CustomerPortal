@@ -23,7 +23,7 @@ interface LoginDialogProps {
 export function LoginDialog({ onNavigate }: LoginDialogProps) {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const { login, isAuthenticated } = useAuth();
+  const { signIn, user } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -35,9 +35,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      // Simulate admin login for specific email
-      const role = data.email === 'admin@example.com' ? 'admin' : 'customer';
-      await login(data.email, role);
+      await signIn(data.email, data.password);
       
       toast({
         title: "Logged in successfully!",
@@ -51,7 +49,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Invalid email or password.",
+        description: error instanceof Error ? error.message : "Invalid email or password.",
       });
     }
   };
@@ -59,7 +57,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {isAuthenticated ? (
+        {user ? (
           <Button variant="ghost" onClick={() => onNavigate('dashboard')}>
             Dashboard
           </Button>

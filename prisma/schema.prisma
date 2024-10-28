@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @unique
+  email         String    @unique
+  firstName     String?
+  lastName      String?
+  role          Role      @default(CUSTOMER)
+  auth_session  Session[]
+  auth_key      Key[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  mailboxes     Mailbox[]
+  packages      Package[]
+}
+
+model Session {
+  id        String   @id @unique
+  userId    String
+  expiresAt DateTime
+  user      User     @relation(references: [id], fields: [userId], onDelete: Cascade)
+}
+
+model Key {
+  id              String  @id @unique
+  hashed_password String?
+  userId          String
+  user            User    @relation(references: [id], fields: [userId], onDelete: Cascade)
+}
+
+model Mailbox {
+  id          String        @id @default(cuid())
+  number      String        @unique
+  type        MailboxType
+  status      MailboxStatus @default(ACTIVE)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  mail        Mail[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Mail {
+  id          String     @id @default(cuid())
+  sender      String
+  recipient   String
+  status      MailStatus @default(RECEIVED)
+  mailboxId   String
+  mailbox     Mailbox    @relation(fields: [mailboxId], references: [id])
+  scannedUrl  String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Package {
+  id          String         @id @default(cuid())
+  trackingNo  String        @unique
+  carrier     String
+  status      PackageStatus @default(RECEIVED)
+  userId      String
+  user        User          @relation(fields: [userId], references: [id])
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+enum MailboxType {
+  DIGITAL_30
+  DIGITAL_60
+  PHYSICAL_STANDARD
+  PHYSICAL_BUSINESS
+  PHYSICAL_EXECUTIVE
+}
+
+enum MailboxStatus {
+  ACTIVE
+  SUSPENDED
+  CANCELLED
+}
+
+enum MailStatus {
+  RECEIVED
+  SCANNED
+  FORWARDED
+  ARCHIVED
+}
+
+enum PackageStatus {
+  RECEIVED
+  PROCESSING
+  FORWARDED
+  DELIVERED
+}
