@@ -35,7 +35,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      await login(data.email, data.password);
+      await login(data.email);
       
       toast({
         title: "Logged in successfully!",
@@ -102,11 +102,6 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
             />
             <Button type="submit" className="w-full">Login</Button>
           </form>
-          <div className="mt-4 text-center">
-            <Button variant="link" className="text-sm text-muted-foreground">
-              Forgot your password?
-            </Button>
-          </div>
         </Form>
       </DialogContent>
     </Dialog>
