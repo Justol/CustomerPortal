@@ -22,7 +22,9 @@ export const supabase = createClient<Database>(
       persistSession: true,
       detectSessionInUrl: true,
       flowType: 'pkce',
-      redirectTo: `${siteUrl}/auth/callback`
+      redirectTo: `${siteUrl}/auth/callback`,
+      storageKey: 'mailbox-auth',
+      storage: window.localStorage
     },
     global: {
       headers: {
