@@ -2,6 +2,10 @@ import { Button } from '@/components/ui/button';
 import { VideoDialog } from '@/components/ui/video-dialog';
 
 export function Hero() {
+  const handleFreeTrial = () => {
+    window.location.href = 'https://mailboxandship.com/index.php/signin';
+  };
+
   return (
     <section className="py-12 md:py-20 bg-gradient-to-b from-muted/50">
       <div className="container mx-auto px-4">
@@ -13,7 +17,7 @@ export function Hero() {
             Manage your mail and packages from anywhere. Get a permanent address, forward mail, and ship globally with ease.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <Button size="lg" className="w-full sm:w-auto">Start Free Trial</Button>
+            <Button size="lg" className="w-full sm:w-auto" onClick={handleFreeTrial}>Start Free Trial</Button>
             <VideoDialog />
           </div>
         </div>
