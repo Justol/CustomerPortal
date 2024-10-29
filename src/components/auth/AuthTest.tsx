@@ -2,49 +2,58 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { useAuth } from '@/lib/auth-context';
-import { useMailbox } from '@/hooks/use-mailbox';
+import { supabase } from '@/lib/supabase';
+import { useToast } from '@/hooks/use-toast';
 
 export function AuthTest() {
-  const { user, signIn, signUp, signOut } = useAuth();
-  const { mailboxes, createMailbox } = useMailbox(user?.id);
+  const { signIn } = useAuth();
   const [loading, setLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleTestSignUp = async () => {
+  const createAdminUser = async () => {
     try {
       setLoading(true);
-      await signUp('test@example.com', 'password123', {
-        firstName: 'Test',
-        lastName: 'User'
+      
+      // First, create the auth user
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: 'admin@example.com',
+        password: 'admin123',
+        options: {
+          data: {
+            role: 'admin',
+            firstName: 'Admin',
+            lastName: 'User',
+          }
+        }
       });
-    } catch (error) {
-      console.error('Sign up error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleTestSignIn = async () => {
-    try {
-      setLoading(true);
-      await signIn('test@example.com', 'password123');
-    } catch (error) {
-      console.error('Sign in error:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      if (authError) throw authError;
 
-  const handleTestCreateMailbox = async () => {
-    if (!user) return;
-    
-    try {
-      setLoading(true);
-      await createMailbox({
-        number: `MB-${Math.random().toString(36).substring(7)}`,
-        type: 'digital_30'
+      // Directly update the profile to ensure admin role
+      const { error: profileError } = await supabase
+        .from('profiles')
+        .update({ 
+          role: 'admin',
+          status: 'active'
+        })
+        .eq('id', authData.user?.id);
+
+      if (profileError) throw profileError;
+
+      toast({
+        title: "Admin Created",
+        description: "Admin user created successfully. Email: admin@example.com, Password: admin123",
       });
-    } catch (error) {
-      console.error('Create mailbox error:', error);
+
+      // Auto sign in as admin
+      await signIn('admin@example.com', 'admin123');
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: error.message,
+      });
     } finally {
       setLoading(false);
     }
@@ -52,58 +61,21 @@ export function AuthTest() {
 
   return (
     <Card className="p-6 max-w-md mx-auto mt-8">
-      <h2 className="text-2xl font-bold mb-4">Auth Test</h2>
-      
-      <div className="space-y-4">
-        <div className="p-4 bg-muted rounded-lg">
-          <h3 className="font-medium mb-2">Current User:</h3>
-          <pre className="text-sm overflow-auto">
-            {JSON.stringify(user, null, 2)}
-          </pre>
-        </div>
-
-        <div className="p-4 bg-muted rounded-lg">
-          <h3 className="font-medium mb-2">Mailboxes:</h3>
-          <pre className="text-sm overflow-auto">
-            {JSON.stringify(mailboxes, null, 2)}
-          </pre>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          {!user ? (
-            <>
-              <Button 
-                onClick={handleTestSignUp} 
-                disabled={loading}
-              >
-                Test Sign Up
-              </Button>
-              <Button 
-                onClick={handleTestSignIn} 
-                disabled={loading}
-              >
-                Test Sign In
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button 
-                onClick={handleTestCreateMailbox} 
-                disabled={loading}
-              >
-                Create Test Mailbox
-              </Button>
-              <Button 
-                onClick={signOut} 
-                variant="destructive" 
-                disabled={loading}
-              >
-                Sign Out
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+      <h2 className="text-2xl font-bold mb-4">Create Admin User</h2>
+      <Button 
+        onClick={createAdminUser} 
+        disabled={loading}
+        className="w-full"
+      >
+        {loading ? "Creating Admin..." : "Create Admin User"}
+      </Button>
+      <p className="mt-4 text-sm text-muted-foreground">
+        This will create an admin user with the following credentials:
+        <br />
+        Email: admin@example.com
+        <br />
+        Password: admin123
+      </p>
     </Card>
   );
 }

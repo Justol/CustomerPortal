@@ -1,16 +1,18 @@
-// src/lib/auth-context.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
+interface UserDetails {
+  role: 'admin' | 'customer';
+  firstName?: string;
+  lastName?: string;
+  status: 'active' | 'inactive' | 'suspended';
+}
+
 interface AuthContextType {
   user: User | null;
-  userDetails: { 
-    role: string;
-    firstName?: string;
-    lastName?: string;
-  } | null;
+  userDetails: UserDetails | null;
   loading: boolean;
   signUp: (email: string, password: string, metadata?: { [key: string]: any }) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
@@ -23,41 +25,46 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userDetails, setUserDetails] = useState<{ role: string; firstName?: string; lastName?: string; } | null>(null);
+  const [userDetails, setUserDetails] = useState<UserDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const isAdmin = userDetails?.role === 'super_admin' || 
-                 userDetails?.role === 'admin' || 
-                 userDetails?.role === 'location_admin';
+  const isAdmin = userDetails?.role === 'admin';
 
   useEffect(() => {
-    // Set up Supabase auth state listener
-    const setupAuthListener = async () => {
-      // Get initial session
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await fetchUserDetails(session.user.id);
-      }
-
-      // Listen for auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const setupAuth = async () => {
+      try {
+        // Get initial session
+        const { data: { session } } = await supabase.auth.getSession();
         setUser(session?.user ?? null);
+        
         if (session?.user) {
           await fetchUserDetails(session.user.id);
-        } else {
-          setUserDetails(null);
         }
-        setLoading(false);
-      });
 
-      return () => {
-        subscription.unsubscribe();
-      };
+        // Set up auth state change listener
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          async (_event, session) => {
+            setUser(session?.user ?? null);
+            if (session?.user) {
+              await fetchUserDetails(session.user.id);
+            } else {
+              setUserDetails(null);
+            }
+            setLoading(false);
+          }
+        );
+
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (error) {
+        console.error('Auth setup error:', error);
+        setLoading(false);
+      }
     };
 
-    setupAuthListener();
+    setupAuth();
   }, []);
 
   const fetchUserDetails = async (userId: string) => {
@@ -70,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
 
-      if (!data.status || data.status !== 'active') {
+      if (data.status !== 'active') {
         await signOut();
         toast({
           variant: "destructive",
@@ -79,11 +86,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         return;
       }
-      
+
       setUserDetails({
         role: data.role,
         firstName: data.first_name,
-        lastName: data.last_name
+        lastName: data.last_name,
+        status: data.status
       });
     } catch (error) {
       console.error('Error fetching user details:', error);
@@ -100,8 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             ...metadata,
-            role: 'customer',
-            status: 'active'
+            role: metadata?.role || 'customer',
           }
         }
       });
@@ -113,11 +120,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Please check your email to confirm your account.",
       });
     } catch (error: any) {
-      console.error("Sign up error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to sign up. Please try again.",
+        description: error.message,
       });
       throw error;
     } finally {
@@ -140,11 +146,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "You have successfully signed in.",
       });
     } catch (error: any) {
-      console.error("Sign in error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to sign in. Please try again.",
+        description: error.message,
       });
       throw error;
     } finally {
@@ -158,15 +163,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       
-      // Clear user state
       setUser(null);
       setUserDetails(null);
     } catch (error: any) {
-      console.error("Sign out error:", error);
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message || "Failed to sign out. Please try again.",
+        description: error.message,
       });
       throw error;
     } finally {

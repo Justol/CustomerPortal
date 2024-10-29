@@ -46,9 +46,12 @@ export function SignUpDialog() {
   const onSubmit = async (data: SignUpForm) => {
     try {
       setLoading(true);
+      // Create the user with admin role
       await signUp(data.email, data.password, {
         firstName: data.firstName,
         lastName: data.lastName,
+        role: 'admin', // Set role as admin
+        status: 'active'
       });
       
       toast({

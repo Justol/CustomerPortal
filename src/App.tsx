@@ -15,15 +15,19 @@ import { Affiliates } from '@/components/sections/Affiliates';
 import { Partners } from '@/components/sections/Partners';
 import { Blog } from '@/components/sections/Blog';
 import { BlogPost } from '@/components/sections/BlogPost';
-import { AuthProvider } from '@/lib/auth-context';
+import { useAuth } from '@/lib/auth-context';
 import { Dashboard } from '@/components/sections/Dashboard';
+import { AuthTest } from '@/components/auth/AuthTest';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [currentBlogPost, setCurrentBlogPost] = useState<string | null>(null);
+  const { user } = useAuth();
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'auth-test':
+        return <AuthTest />;
       case 'dashboard':
         return <Dashboard onNavigate={setCurrentPage} />;
       case 'services':
@@ -60,18 +64,16 @@ function App() {
   };
 
   return (
-    <AuthProvider>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-        <div className="min-h-screen bg-background">
-          <Navbar onNavigate={setCurrentPage} currentPage={currentPage} />
-          <main>
-            {renderPage()}
-          </main>
-          <Footer onNavigate={setCurrentPage} />
-        </div>
-        <Toaster />
-      </ThemeProvider>
-    </AuthProvider>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+      <div className="min-h-screen bg-background">
+        <Navbar onNavigate={setCurrentPage} currentPage={currentPage} />
+        <main>
+          {renderPage()}
+        </main>
+        <Footer onNavigate={setCurrentPage} />
+      </div>
+      <Toaster />
+    </ThemeProvider>
   );
 }
 
