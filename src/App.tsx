@@ -16,20 +16,34 @@ import { Partners } from '@/components/sections/Partners';
 import { Blog } from '@/components/sections/Blog';
 import { BlogPost } from '@/components/sections/BlogPost';
 import { useAuth } from '@/lib/auth-context';
-import { Dashboard } from '@/components/sections/Dashboard';
+import { CustomerDashboard } from '@/components/dashboard/CustomerDashboard';
+import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
 import { AuthTest } from '@/components/auth/AuthTest';
 
 function App() {
   const [currentPage, setCurrentPage] = useState('home');
   const [currentBlogPost, setCurrentBlogPost] = useState<string | null>(null);
-  const { user } = useAuth();
+  const { user, userDetails } = useAuth();
+
+  const renderDashboard = () => {
+    if (!user) return null;
+
+    // Check user role for admin access
+    const isAdminRole = ['super_admin', 'admin', 'location_admin'].includes(userDetails?.role || '');
+    
+    if (isAdminRole) {
+      return <AdminDashboard onNavigate={setCurrentPage} />;
+    }
+    
+    return <CustomerDashboard onNavigate={setCurrentPage} />;
+  };
 
   const renderPage = () => {
     switch (currentPage) {
       case 'auth-test':
         return <AuthTest />;
       case 'dashboard':
-        return <Dashboard onNavigate={setCurrentPage} />;
+        return renderDashboard();
       case 'services':
         return <Services />;
       case 'contact':

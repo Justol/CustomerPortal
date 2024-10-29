@@ -1,14 +1,29 @@
 import { useEffect } from 'react';
 import { useAuth } from '@/lib/auth-context';
 
-export function useAuthGuard(onNavigate: (page: string) => void) {
-  const { user, loading } = useAuth();
+interface AuthGuardOptions {
+  requiredRoles?: string[];
+}
+
+export function useAuthGuard(onNavigate: (page: string) => void, options: AuthGuardOptions = {}) {
+  const { user, userDetails, loading } = useAuth();
+  const { requiredRoles } = options;
 
   useEffect(() => {
-    if (!loading && !user) {
-      onNavigate('home');
+    if (!loading) {
+      if (!user) {
+        // Not authenticated
+        onNavigate('home');
+      } else if (requiredRoles?.length) {
+        // Check role requirements
+        const hasRequiredRole = requiredRoles.includes(userDetails?.role || '');
+        if (!hasRequiredRole) {
+          // User doesn't have required role - redirect to regular dashboard
+          onNavigate('dashboard');
+        }
+      }
     }
-  }, [user, loading, onNavigate]);
+  }, [user, userDetails, loading, onNavigate, requiredRoles]);
 
-  return { user, loading };
+  return { user, userDetails, loading };
 }

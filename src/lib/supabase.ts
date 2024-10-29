@@ -38,6 +38,33 @@ export const supabase = createClient<Database>(
       params: {
         eventsPerSecond: 10
       }
+    },
+    // Add retry configuration
+    fetch: (url, options = {}) => {
+      return fetch(url, {
+        ...options,
+        headers: {
+          ...options.headers,
+          'Content-Type': 'application/json',
+        },
+        // Add retry logic
+      }).then(async (response) => {
+        if (!response.ok) {
+          const error = await response.json().catch(() => ({}));
+          throw new Error(error.message || 'Network response was not ok');
+        }
+        return response;
+      }).catch((error) => {
+        console.error('Fetch error:', error);
+        // Retry logic for failed requests
+        return new Promise((resolve, reject) => {
+          setTimeout(() => {
+            fetch(url, options)
+              .then(resolve)
+              .catch(reject);
+          }, 1000); // Retry after 1 second
+        });
+      });
     }
   }
 );

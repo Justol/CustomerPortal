@@ -22,8 +22,8 @@ interface LoginDialogProps {
 
 export function LoginDialog({ onNavigate }: LoginDialogProps) {
   const [open, setOpen] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const { signIn, user } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const { signIn, user, userDetails } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -35,16 +35,32 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
 
   const onSubmit = async (data: LoginForm) => {
     try {
-      setIsSubmitting(true);
+      setLoading(true);
       await signIn(data.email, data.password);
       setOpen(false);
       form.reset();
-      onNavigate('dashboard');
+
+      // Navigate based on user role
+      if (userDetails?.role === 'super_admin' || userDetails?.role === 'admin' || userDetails?.role === 'location_admin') {
+        onNavigate('admin-dashboard');
+      } else {
+        onNavigate('dashboard');
+      }
     } catch (error) {
-      // Error is handled by the auth context
-      console.error('Sign in error:', error);
+      form.setError('password', {
+        type: 'manual',
+        message: 'Invalid email or password'
+      });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
+    }
+  };
+
+  const handleDashboardClick = () => {
+    if (userDetails?.role === 'super_admin' || userDetails?.role === 'admin' || userDetails?.role === 'location_admin') {
+      onNavigate('admin-dashboard');
+    } else {
+      onNavigate('dashboard');
     }
   };
 
@@ -52,7 +68,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {user ? (
-          <Button variant="ghost" onClick={() => onNavigate('dashboard')}>
+          <Button variant="ghost" onClick={handleDashboardClick}>
             Dashboard
           </Button>
         ) : (
@@ -78,7 +94,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
                     <Input 
                       placeholder="you@example.com" 
                       type="email"
-                      disabled={isSubmitting}
+                      disabled={loading}
                       {...field} 
                     />
                   </FormControl>
@@ -95,7 +111,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
                   <FormControl>
                     <Input 
                       type="password"
-                      disabled={isSubmitting}
+                      disabled={loading}
                       {...field} 
                     />
                   </FormControl>
@@ -103,8 +119,8 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? (
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Signing in...

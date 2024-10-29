@@ -8,6 +8,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
 import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
 
 const signupSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
@@ -46,17 +47,11 @@ export function SignUpDialog() {
   const onSubmit = async (data: SignUpForm) => {
     try {
       setLoading(true);
-      // Create the user with admin role
       await signUp(data.email, data.password, {
         firstName: data.firstName,
         lastName: data.lastName,
-        role: 'admin', // Set role as admin
+        role: 'customer',
         status: 'active'
-      });
-      
-      toast({
-        title: "Account created!",
-        description: "Please check your email to confirm your account.",
       });
       
       setOpen(false);
@@ -176,7 +171,14 @@ export function SignUpDialog() {
               )}
             />
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Creating account..." : "Sign Up"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating account...
+                </>
+              ) : (
+                "Sign Up"
+              )}
             </Button>
           </form>
         </Form>

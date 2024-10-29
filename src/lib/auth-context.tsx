@@ -4,7 +4,7 @@ import { User } from '@supabase/supabase-js';
 import { useToast } from '@/hooks/use-toast';
 
 interface UserDetails {
-  role: 'admin' | 'customer';
+  role: 'super_admin' | 'admin' | 'location_admin' | 'location_staff' | 'customer_service' | 'customer';
   firstName?: string;
   lastName?: string;
   status: 'active' | 'inactive' | 'suspended';
@@ -19,6 +19,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isSuperAdmin: boolean;
+  fetchUserDetails: (userId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,20 +31,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  const isAdmin = userDetails?.role === 'admin';
+  const isAdmin = ['super_admin', 'admin', 'location_admin'].includes(userDetails?.role || '');
+  const isSuperAdmin = userDetails?.role === 'super_admin';
+
+  const fetchUserDetails = async (userId: string) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('role, first_name, last_name, status')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (error) {
+        throw error;
+      }
+
+      if (!profile) {
+        // Create profile if it doesn't exist
+        const { data: userData } = await supabase.auth.getUser(userId);
+        const defaultRole = userData.user?.user_metadata?.role || 'customer';
+
+        const { data: newProfile, error: insertError } = await supabase
+          .from('profiles')
+          .insert({
+            id: userId,
+            email: userData.user?.email,
+            role: defaultRole,
+            status: 'active',
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        setUserDetails({
+          role: newProfile.role,
+          firstName: newProfile.first_name,
+          lastName: newProfile.last_name,
+          status: newProfile.status,
+        });
+      } else {
+        setUserDetails({
+          role: profile.role,
+          firstName: profile.first_name,
+          lastName: profile.last_name,
+          status: profile.status,
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching user details:', error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to fetch user details. Please try again.",
+      });
+      throw error;
+    }
+  };
 
   useEffect(() => {
     const setupAuth = async () => {
       try {
-        // Get initial session
         const { data: { session } } = await supabase.auth.getSession();
-        setUser(session?.user ?? null);
         
         if (session?.user) {
+          setUser(session.user);
           await fetchUserDetails(session.user.id);
         }
 
-        // Set up auth state change listener
         const { data: { subscription } } = supabase.auth.onAuthStateChange(
           async (_event, session) => {
             setUser(session?.user ?? null);
@@ -67,42 +123,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setupAuth();
   }, []);
 
-  const fetchUserDetails = async (userId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('role, first_name, last_name, status')
-        .eq('id', userId)
-        .single();
-
-      if (error) throw error;
-
-      if (data.status !== 'active') {
-        await signOut();
-        toast({
-          variant: "destructive",
-          title: "Account Inactive",
-          description: "Your account is not active. Please contact support.",
-        });
-        return;
-      }
-
-      setUserDetails({
-        role: data.role,
-        firstName: data.first_name,
-        lastName: data.last_name,
-        status: data.status
-      });
-    } catch (error) {
-      console.error('Error fetching user details:', error);
-      setUserDetails(null);
-    }
-  };
-
   const signUp = async (email: string, password: string, metadata?: { [key: string]: any }) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
@@ -134,12 +158,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = async (email: string, password: string) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      if (data.user) {
+        await fetchUserDetails(data.user.id);
+      }
 
       toast({
         title: "Welcome back!",
@@ -187,7 +215,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signOut,
         isAuthenticated: !!user,
-        isAdmin
+        isAdmin,
+        isSuperAdmin,
+        fetchUserDetails
       }}
     >
       {children}
