@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useAuth } from '@/lib/auth-context';
+import { Loader2 } from 'lucide-react';
 
 const loginSchema = z.object({
   email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(1, 'Password is required'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
@@ -21,7 +22,8 @@ interface LoginDialogProps {
 
 export function LoginDialog({ onNavigate }: LoginDialogProps) {
   const [open, setOpen] = useState(false);
-  const { signIn, user, loading } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { signIn, user } = useAuth();
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -33,6 +35,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
 
   const onSubmit = async (data: LoginForm) => {
     try {
+      setIsSubmitting(true);
       await signIn(data.email, data.password);
       setOpen(false);
       form.reset();
@@ -40,6 +43,8 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
     } catch (error) {
       // Error is handled by the auth context
       console.error('Sign in error:', error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -73,7 +78,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
                     <Input 
                       placeholder="you@example.com" 
                       type="email"
-                      disabled={loading}
+                      disabled={isSubmitting}
                       {...field} 
                     />
                   </FormControl>
@@ -90,7 +95,7 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
                   <FormControl>
                     <Input 
                       type="password"
-                      disabled={loading}
+                      disabled={isSubmitting}
                       {...field} 
                     />
                   </FormControl>
@@ -98,8 +103,15 @@ export function LoginDialog({ onNavigate }: LoginDialogProps) {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
+            <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                "Sign In"
+              )}
             </Button>
           </form>
         </Form>

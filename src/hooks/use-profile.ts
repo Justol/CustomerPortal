@@ -18,6 +18,7 @@ export function useProfile(userId: string | undefined) {
 
     async function loadProfile() {
       try {
+        setLoading(true);
         const { data, error } = await supabase
           .from('profiles')
           .select('*')
@@ -27,6 +28,7 @@ export function useProfile(userId: string | undefined) {
         if (error) throw error;
         setProfile(data);
       } catch (error: any) {
+        console.error('Error loading profile:', error);
         toast({
           variant: "destructive",
           title: "Error",
@@ -38,6 +40,28 @@ export function useProfile(userId: string | undefined) {
     }
 
     loadProfile();
+
+    // Subscribe to realtime changes
+    const subscription = supabase
+      .channel(`profile:${userId}`)
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'profiles',
+          filter: `id=eq.${userId}`
+        }, 
+        (payload) => {
+          if (payload.eventType === 'UPDATE') {
+            setProfile(payload.new as Profile);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [userId, toast]);
 
   const updateProfile = useCallback(async (updates: Partial<Profile>) => {
@@ -50,14 +74,13 @@ export function useProfile(userId: string | undefined) {
         .eq('id', userId);
 
       if (error) throw error;
-
-      setProfile(prev => prev ? { ...prev, ...updates } : null);
       
       toast({
         title: "Profile updated",
         description: "Your profile has been successfully updated.",
       });
     } catch (error: any) {
+      console.error('Error updating profile:', error);
       toast({
         variant: "destructive",
         title: "Error",

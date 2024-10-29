@@ -11,16 +11,20 @@ import {
   Mail,
   CreditCard,
   Repeat,
-  Cog
+  Cog,
+  Building2,
+  UserCog
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { AdminUserManagement } from './AdminUserManagement';
+import { AdminUserManagement } from './admin/AdminUserManagement';
 import { AdminMailboxDashboard } from './mailbox/AdminMailboxDashboard';
 import { AdminShippingDashboard } from './shipping/AdminShippingDashboard';
 import { AdminPaymentManagement } from './payment/AdminPaymentManagement';
 import { AdminSubscriptionModule } from './subscription/AdminSubscriptionModule';
 import { AdminSettingsModule } from './settings/AdminSettingsModule';
 import { AdminOverview } from './overview/AdminOverview';
+import { LocationManagement } from './admin/locations/LocationManagement';
+import { AdminGroupManagement } from './admin/AdminGroupManagement';
 
 interface AdminDashboardProps {
   onNavigate: (page: string) => void;
@@ -55,7 +59,7 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
         </div>
 
         <Tabs defaultValue="overview" className="space-y-8">
-          <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <TabsList className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
             <TabsTrigger value="overview" className="flex items-center gap-2">
               <DollarSign className="h-4 w-4" />
               Overview
@@ -71,6 +75,14 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
             <TabsTrigger value="users" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Users & Clients
+            </TabsTrigger>
+            <TabsTrigger value="locations" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              Locations
+            </TabsTrigger>
+            <TabsTrigger value="groups" className="flex items-center gap-2">
+              <UserCog className="h-4 w-4" />
+              Admin Groups
             </TabsTrigger>
             <TabsTrigger value="payments" className="flex items-center gap-2">
               <CreditCard className="h-4 w-4" />
@@ -95,9 +107,15 @@ export function AdminDashboard({ onNavigate }: AdminDashboardProps) {
           </TabsContent>
 
           <TabsContent value="users">
-            <Card className="p-6">
-              <AdminUserManagement />
-            </Card>
+            <AdminUserManagement />
+          </TabsContent>
+
+          <TabsContent value="locations">
+            <LocationManagement />
+          </TabsContent>
+
+          <TabsContent value="groups">
+            <AdminGroupManagement />
           </TabsContent>
 
           <TabsContent value="payments">

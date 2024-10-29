@@ -1,3 +1,4 @@
+// src/lib/auth-context.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
@@ -5,55 +6,85 @@ import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: User | null;
-  userDetails: { role: string } | null;
+  userDetails: { 
+    role: string;
+    firstName?: string;
+    lastName?: string;
+  } | null;
   loading: boolean;
   signUp: (email: string, password: string, metadata?: { [key: string]: any }) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [userDetails, setUserDetails] = useState<{ role: string } | null>(null);
+  const [userDetails, setUserDetails] = useState<{ role: string; firstName?: string; lastName?: string; } | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const isAdmin = userDetails?.role === 'super_admin' || 
+                 userDetails?.role === 'admin' || 
+                 userDetails?.role === 'location_admin';
+
   useEffect(() => {
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    // Set up Supabase auth state listener
+    const setupAuthListener = async () => {
+      // Get initial session
+      const { data: { session } } = await supabase.auth.getSession();
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchUserDetails(session.user.id);
+        await fetchUserDetails(session.user.id);
       }
-    });
 
-    // Listen for changes on auth state (signed in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserDetails(session.user.id);
-      } else {
-        setUserDetails(null);
-      }
-      setLoading(false);
-    });
+      // Listen for auth changes
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          await fetchUserDetails(session.user.id);
+        } else {
+          setUserDetails(null);
+        }
+        setLoading(false);
+      });
 
-    return () => subscription.unsubscribe();
+      return () => {
+        subscription.unsubscribe();
+      };
+    };
+
+    setupAuthListener();
   }, []);
 
   const fetchUserDetails = async (userId: string) => {
     try {
       const { data, error } = await supabase
         .from('profiles')
-        .select('role')
+        .select('role, first_name, last_name, status')
         .eq('id', userId)
         .single();
 
       if (error) throw error;
-      setUserDetails(data);
+
+      if (!data.status || data.status !== 'active') {
+        await signOut();
+        toast({
+          variant: "destructive",
+          title: "Account Inactive",
+          description: "Your account is not active. Please contact support.",
+        });
+        return;
+      }
+      
+      setUserDetails({
+        role: data.role,
+        firstName: data.first_name,
+        lastName: data.last_name
+      });
     } catch (error) {
       console.error('Error fetching user details:', error);
       setUserDetails(null);
@@ -69,7 +100,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: {
           data: {
             ...metadata,
-            role: 'customer'
+            role: 'customer',
+            status: 'active'
           }
         }
       });
@@ -125,6 +157,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
+      
+      // Clear user state
+      setUser(null);
+      setUserDetails(null);
     } catch (error: any) {
       console.error("Sign out error:", error);
       toast({
@@ -147,7 +183,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signIn,
         signOut,
-        isAuthenticated: !!user 
+        isAuthenticated: !!user,
+        isAdmin
       }}
     >
       {children}
